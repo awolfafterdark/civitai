@@ -76,6 +76,15 @@ CREATE TABLE IF NOT EXISTS checkpoints (
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS idx_image_tags_tag ON image_tags(tag_id, image_id);
 CREATE INDEX IF NOT EXISTS idx_image_sources_source ON image_sources(source_id, image_id);
+CREATE VIRTUAL TABLE IF NOT EXISTS image_text_fts USING fts5(
+  image_id UNINDEXED,
+  prompt,
+  negative_prompt,
+  tags,
+  model_name,
+  lora_names,
+  tokenize='unicode61 remove_diacritics 2'
+);
 """
 
 
@@ -151,6 +160,55 @@ def _tag_id(tag: Any) -> tuple[str | None, dict[str, Any] | None]:
     return None, None
 
 
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _names(value: Any) -> list[str]:
+    """Extract displayable names without mistaking opaque tag IDs for names."""
+    if not isinstance(value, list):
+        return []
+    names: list[str] = []
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            names.append(item.strip())
+        elif isinstance(item, dict):
+            for key in ("name", "tagName", "modelName", "versionName"):
+                if _text(item.get(key)):
+                    names.append(_text(item[key]))
+                    break
+    return names
+
+
+def _metadata_dict(image: dict[str, Any]) -> dict[str, Any]:
+    for key in ("meta", "metadata"):
+        value = image.get(key)
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
+def image_text_fields(image: dict[str, Any]) -> tuple[str, str, str, str, str]:
+    """Normalize the searchable metadata that may be safely retained from any source."""
+    meta = _metadata_dict(image)
+    prompt = _text(image.get("prompt")) or _text(meta.get("prompt")) or _text(meta.get("Prompt"))
+    negative = (_text(image.get("negativePrompt")) or _text(image.get("negative_prompt"))
+                or _text(meta.get("negativePrompt")) or _text(meta.get("NegativePrompt")))
+    tag_names = _names(image.get("tags")) or _names(meta.get("tags"))
+    model = (_text(image.get("modelName")) or _text(image.get("model_name"))
+             or _text(meta.get("modelName")) or _text(meta.get("Model")))
+    loras = _names(image.get("loras")) or _names(meta.get("loras"))
+    return prompt, negative, " ".join(tag_names), model, " ".join(loras)
+
+
+def _refresh_text_index(conn: sqlite3.Connection, image_id: str, image: dict[str, Any]) -> None:
+    conn.execute("DELETE FROM image_text_fts WHERE image_id=?", (image_id,))
+    conn.execute(
+        "INSERT INTO image_text_fts(image_id,prompt,negative_prompt,tags,model_name,lora_names) VALUES(?,?,?,?,?,?)",
+        (image_id, *image_text_fields(image)),
+    )
+
+
 def upsert_image(conn: sqlite3.Connection, image: dict[str, Any], source_id: int, import_id: int | None) -> tuple[bool, int]:
     image_id = image.get("id", image.get("imageId"))
     if image_id is None:
@@ -169,6 +227,7 @@ def upsert_image(conn: sqlite3.Connection, image: dict[str, Any], source_id: int
         "nsfw_level=COALESCE(excluded.nsfw_level,images.nsfw_level), metadata_json=excluded.metadata_json, updated_at=CURRENT_TIMESTAMP",
         (image_id, url, created_at, str(model_version_id) if model_version_id is not None else None, nsfw_level, canonical_json(image)),
     )
+    _refresh_text_index(conn, image_id, image)
     raw_tags = image.get("tagIds")
     if raw_tags is None:
         raw_tags = image.get("tags", [])
@@ -254,3 +313,40 @@ def search_images(conn: sqlite3.Connection, all_tag_ids: Iterable[str], any_tag_
         + where + " GROUP BY i.id ORDER BY i.created_at DESC, i.id DESC LIMIT ?", params
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def text_search(conn: sqlite3.Connection, terms: Iterable[str], scope: str, limit: int) -> list[dict[str, Any]]:
+    """Search retained metadata with literal AND terms, never executing user FTS syntax."""
+    allowed_scopes = {"prompt": "prompt", "prompt-tags": "{prompt tags}", "all": ""}
+    if scope not in allowed_scopes:
+        raise ValueError(f"Unknown text search scope: {scope}")
+    cleaned = [term.strip() for term in terms if term.strip()]
+    if not cleaned:
+        return []
+    quoted = [f'"{term.replace(chr(34), chr(34) * 2)}"' for term in cleaned]
+    expression = " AND ".join(quoted)
+    if allowed_scopes[scope]:
+        expression = f"{allowed_scopes[scope]} : ({expression})"
+    rows = conn.execute(
+        "SELECT i.id,i.url,i.created_at,i.model_version_id,i.nsfw_level,"
+        "snippet(image_text_fts,1,'[',']','…',12) AS prompt_snippet "
+        "FROM image_text_fts JOIN images i ON i.id=image_text_fts.image_id "
+        "WHERE image_text_fts MATCH ? ORDER BY bm25(image_text_fts), i.id DESC LIMIT ?",
+        (expression, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def rebuild_text_index(conn: sqlite3.Connection) -> int:
+    """Rebuild FTS after a schema upgrade without re-downloading any source data."""
+    rows = conn.execute("SELECT id,metadata_json FROM images").fetchall()
+    conn.execute("DELETE FROM image_text_fts")
+    for row in rows:
+        try:
+            image = json.loads(row["metadata_json"])
+        except (TypeError, json.JSONDecodeError):
+            image = {}
+        if isinstance(image, dict):
+            _refresh_text_index(conn, str(row["id"]), image)
+    conn.commit()
+    return len(rows)
