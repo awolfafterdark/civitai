@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 from civitai_indexer import db
 from civitai_indexer.collector import TRPC_HEADERS, sync_trpc, trpc_url
-from civitai_indexer.importers import find_next_cursor, import_images, unwrap_items
+from civitai_indexer.importers import find_next_cursor, import_images, import_parquet, unwrap_items
 from civitai_indexer.streaming import stream_tar_gz
 
 
@@ -121,6 +121,13 @@ class IndexerTests(unittest.TestCase):
             else:
                 os.environ["GITHUB_STEP_SUMMARY"] = old_summary
         self.assertIn("`456.json`", summary.read_text(encoding="utf-8"))
+
+    def test_parquet_import_explains_optional_dependency_when_unavailable(self):
+        try:
+            import pyarrow  # noqa: F401
+        except ImportError:
+            with self.assertRaisesRegex(RuntimeError, "\\[parquet\\]"):
+                import_parquet(self.conn, self.root / "missing.parquet", "fixture", "fixture")
 
 
 if __name__ == "__main__":
