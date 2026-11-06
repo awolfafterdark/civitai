@@ -34,6 +34,19 @@ def _empty_counters() -> dict[str, int]:
     return {"records": 0, "images": 0, "tags": 0, "memberships": 0, "skipped_media": 0, "discarded_media_bytes": 0}
 
 
+def report_captured_sidecar(url: str, member_name: str) -> None:
+    """Emit immediate, human-readable progress without exposing record content or credentials."""
+    line = f"CAPTURED_JSON {url} :: {member_name}"
+    print(line, flush=True)
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        # GitHub exposes this job summary file to the running step. One line per sidecar is
+        # intentionally useful for bounded initial runs; callers should not enable it for an
+        # unbounded crawl without rotating the manifest.
+        with open(summary, "a", encoding="utf-8") as handle:
+            handle.write(f"- `{member_name}`\n")
+
+
 def stream_tar_gz(conn: sqlite3.Connection, url: str, source_name: str, source_kind: str = "webdataset-sidecars",
                   *, timeout: float = 90.0, opener: OpenStream = http_stream, headers: dict[str, str] | None = None,
                   commit_every: int = 500) -> dict[str, int]:
@@ -66,6 +79,7 @@ def stream_tar_gz(conn: sqlite3.Connection, url: str, source_name: str, source_k
                     raise ValueError(f"Invalid JSON sidecar {member.name!r} in {url}") from exc
                 if not isinstance(record, dict):
                     continue
+                report_captured_sidecar(url, member.name)
                 counters["records"] += 1
                 ok, memberships = db.upsert_image(conn, record, source_id, import_id)
                 counters["images"] += int(ok)
