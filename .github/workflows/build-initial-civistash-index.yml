@@ -21,6 +21,10 @@ jobs:
           python-version: "3.12"
       - name: Install indexer
         run: python -m pip install -e civitai-indexer
+      - name: Start JSON capture manifest
+        run: |
+          echo "## Captured JSON sidecars" >> "$GITHUB_STEP_SUMMARY"
+          echo "The list below is appended as each metadata sidecar is accepted; media members are discarded." >> "$GITHUB_STEP_SUMMARY"
       - name: Stream JSON sidecars without writing media
         run: >-
           python -m civitai_indexer
