@@ -1,0 +1,43 @@
+name: build-initial-civistash-index
+
+on:
+  push:
+    paths:
+      - .github/workflows/build-initial-civistash-index.yml
+      - civitai-indexer/data/civistash_initial_shards.txt
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stream-sidecars:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install indexer
+        run: python -m pip install -e civitai-indexer
+      - name: Stream JSON sidecars without writing media
+        run: >-
+          python -m civitai_indexer
+          --db civitai-indexer/data/initial-civistash.sqlite
+          stream-tar-gz-list civitai-indexer/data/civistash_initial_shards.txt
+          --source civistash-sidecars --workers 2 --timeout 180
+      - name: Measure imported coverage
+        run: >-
+          python -m civitai_indexer
+          --db civitai-indexer/data/initial-civistash.sqlite coverage
+          > civitai-indexer/data/initial-civistash-coverage.json
+      - name: Publish initial metadata-only database
+        uses: actions/upload-artifact@v4
+        with:
+          name: initial-civistash-index
+          path: |
+            civitai-indexer/data/initial-civistash.sqlite
+            civitai-indexer/data/initial-civistash-coverage.json
+          if-no-files-found: error
+          retention-days: 7
