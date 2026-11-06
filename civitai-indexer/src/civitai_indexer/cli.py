@@ -7,6 +7,7 @@ from pathlib import Path
 from . import db
 from .collector import sync_trpc
 from .importers import import_images, import_tags
+from .streaming import stream_many_tar_gz, stream_tar_gz
 
 
 def comma_values(value: str) -> list[str]:
@@ -36,6 +37,18 @@ def parser() -> argparse.ArgumentParser:
     sync.add_argument("--delay", type=float, default=2.0, help="seconds between page requests (default: 2)")
     sync.add_argument("--checkpoint", default="trpc-newest")
     sync.add_argument("--no-resume", action="store_true")
+    archive = sub.add_parser("stream-tar-gz", help="stream one .tar.gz; ingest JSON sidecars only and never write media")
+    archive.add_argument("url")
+    archive.add_argument("--source", required=True)
+    archive.add_argument("--kind", default="webdataset-sidecars")
+    archive.add_argument("--timeout", type=float, default=90.0)
+    batch = sub.add_parser("stream-tar-gz-list", help="concurrently stream independent tar.gz archives; ingest JSON sidecars only")
+    batch.add_argument("url_list", type=Path, help="one archive URL per line")
+    batch.add_argument("--source", required=True)
+    batch.add_argument("--kind", default="webdataset-sidecars")
+    batch.add_argument("--workers", type=int, default=4)
+    batch.add_argument("--timeout", type=float, default=90.0)
+    batch.add_argument("--checkpoint-prefix", default="stream-tar-gz")
     return p
 
 
@@ -55,6 +68,11 @@ def main(argv: list[str] | None = None) -> int:
         result = db.search_images(conn, comma_values(args.all), comma_values(args.any), comma_values(args.exclude), args.limit)
     elif args.command == "sync-trpc":
         result = sync_trpc(conn, max_pages=args.pages, checkpoint=args.checkpoint, delay_seconds=args.delay, resume=not args.no_resume)
+    elif args.command == "stream-tar-gz":
+        result = stream_tar_gz(conn, args.url, args.source, args.kind, timeout=args.timeout)
+    elif args.command == "stream-tar-gz-list":
+        result = stream_many_tar_gz(conn, args.url_list.read_text(encoding="utf-8").splitlines(), args.source, args.kind,
+                                    workers=args.workers, timeout=args.timeout, checkpoint_prefix=args.checkpoint_prefix)
     else:
         raise AssertionError(args.command)
     print(json.dumps(result, indent=2, ensure_ascii=False))
