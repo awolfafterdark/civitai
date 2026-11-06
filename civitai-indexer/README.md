@@ -9,6 +9,7 @@ A media-free, provenance-aware local Civitai image/tag database. It exists to ma
 - Source-aware coverage report that distinguishes all images from those with verified formal tag membership.
 - Local AND/OR/NOT tag-ID queries across the entire imported corpus.
 - Conservative `image.getInfinite` newest-first collector using the verified browser-context request shape, opaque cursor checkpoints, bounded pages, and no media retrieval.
+- Streaming `.tar.gz` sidecar importer: reads only JSON members into SQLite, immediately discards media members, and parallelizes independent archives through temporary metadata-only worker databases.
 - Standard-library-only Python implementation and deterministic tests.
 
 ## Why this is structured this way
