@@ -98,6 +98,30 @@ def import_tags(conn, path: Path, source_name: str, source_kind: str, location: 
     return counters
 
 
+def import_parquet(conn, path: Path, source_name: str, source_kind: str, location: str | None = None,
+                   license_note: str | None = None, batch_size: int = 4096) -> dict[str, int]:
+    """Import a metadata-only Parquet file in bounded batches."""
+    try:
+        import pyarrow.parquet as pq
+    except ImportError as exc:
+        raise RuntimeError("Parquet import requires the optional dependency: pip install -e '.[parquet]'") from exc
+    source_id = db.ensure_source(conn, source_name, source_kind, location, license_note)
+    import_id = db.begin_import(conn, source_id, str(path), sha256_file(path))
+    counters = {"records": 0, "images": 0, "tags": 0, "memberships": 0}
+    reader = pq.ParquetFile(path)
+    with db.transaction(conn):
+        for batch in reader.iter_batches(batch_size=batch_size):
+            for record in batch.to_pylist():
+                counters["records"] += 1
+                ok, memberships = db.upsert_image(conn, record, source_id, import_id)
+                counters["images"] += int(ok)
+                counters["memberships"] += memberships
+                raw_tags = record.get("tagIds", record.get("tags", []))
+                counters["tags"] += len(raw_tags) if isinstance(raw_tags, list) else 0
+        db.finish_import(conn, import_id, counters)
+    return counters
+
+
 def import_payload(conn, payload: Any, source_name: str, source_kind: str, artifact: str,
                    location: str | None = None) -> dict[str, int]:
     source_id = db.ensure_source(conn, source_name, source_kind, location)
