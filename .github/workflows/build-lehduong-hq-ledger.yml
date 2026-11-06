@@ -1,0 +1,52 @@
+name: build-lehduong-hq-ledger
+
+on:
+  push:
+    paths:
+      - .github/workflows/build-lehduong-hq-ledger.yml
+      - civitai-indexer/src/civitai_indexer/**
+      - civitai-indexer/pyproject.toml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  import-parquet-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e 'civitai-indexer[parquet]'
+      - name: Import all metadata-only Parquet partitions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for number in $(seq 1 25); do
+            name="split_${number}.parquet"
+            temp="${RUNNER_TEMP}/${name}"
+            echo "Downloading metadata partition ${number}/25"
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "https://huggingface.co/datasets/lehduong/civitai-hq/resolve/main/${name}?download=true" \
+              --output "$temp"
+            python -m civitai_indexer --db civitai-indexer/data/lehduong-civitai-hq.sqlite \
+              import-parquet "$temp" --source lehduong-civitai-hq --kind dataset \
+              --location https://huggingface.co/datasets/lehduong/civitai-hq
+            rm -f "$temp"
+          done
+      - name: Measure coverage
+        run: >-
+          python -m civitai_indexer --db civitai-indexer/data/lehduong-civitai-hq.sqlite coverage
+          > civitai-indexer/data/lehduong-civitai-hq-coverage.json
+      - name: Publish metadata-only ledger
+        uses: actions/upload-artifact@v4
+        with:
+          name: lehduong-civitai-hq-ledger
+          path: |
+            civitai-indexer/data/lehduong-civitai-hq.sqlite
+            civitai-indexer/data/lehduong-civitai-hq-coverage.json
+          if-no-files-found: error
+          retention-days: 7
