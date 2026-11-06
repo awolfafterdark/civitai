@@ -11,6 +11,7 @@ This project indexes metadata and formal image→tag relationships. It does **no
 | Civitai `tag.getAll` | Tag catalog | Tag IDs, names, types | Does not establish image membership by itself. |
 | Civistash sidecars | Historical metadata ledger | JSON sidecar records only | The 2026-06-08/09 shards were observed to omit `tags`/`tagIds`; do not treat them as formal memberships without validating each imported shard. |
 | Civ-40M / academic ledgers | Historical completeness ledger | Metadata files only where access and licensing permit | Metadata-only rows must not be treated as tag-complete. |
+| `lehduong/civitai-hq` | Public historical metadata ledger | 25 Parquet files (~200 MB, 1.1M rows) | Schema has no formal image tag relation. |
 
 ## Non-negotiable data rules
 
