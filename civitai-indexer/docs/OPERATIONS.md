@@ -27,6 +27,17 @@ civitai-index --db data/civitai.sqlite coverage
 
 Use this report to quantify total images, tagged images, memberships, and source-specific contributions. Do not call an index near-complete until this measurement exists.
 
+### Metadata-only Parquet sources
+
+```bash
+python -m pip install -e '.[parquet]'
+python -m civitai_indexer --db data/civitai.sqlite import-parquet /tmp/split_1.parquet \
+  --source lehduong-civitai-hq --kind dataset \
+  --location https://huggingface.co/datasets/lehduong/civitai-hq
+```
+
+Parquet records become historical coverage/metadata rows unless the file itself contains a formal `tags` or `tagIds` field.
+
 ## 4. Local exact tag querying
 
 ```bash
