@@ -11,6 +11,8 @@ No media and no archive shard was downloaded.
 
 The Hugging Face Dataset Viewer was also checked as a potential metadata-only escape hatch. It reported no Parquet exports and a failed dataset-generation job (HTTP 500), so it currently cannot serve the JSON sidecar column separately from the archive shards.
 
+An initial two-shard, media-free streaming run completed successfully: it produced 1,927 image metadata records in a 12.5 MB SQLite artifact. Inspection of stored records found no `tags`, `tagIds`, or `tagNames` fields in those actual sidecars. Civistash is therefore currently classified as a metadata coverage ledger, not a verified image→tag source, regardless of the example schema in its dataset card.
+
 ## Why the archive was deliberately not downloaded
 
 The repository contains daily `.tar.gz` WebDataset shards. Each shard holds paired media files and `<image-id>.json` metadata sidecars, but does **not** publish sidecars as separate downloadable files. The observed daily shards range from approximately 1.1 GB to 7.5 GB. Downloading a shard would necessarily transfer media bytes even if the extractor ignored them after receipt.
@@ -21,7 +23,7 @@ That is incompatible with this project's media-free rule. The indexer therefore 
 
 | Source | Current role | Status |
 |---|---|---|
-| Civistash | Validates sidecar schema and historical popular-content coverage | Cannot be directly ingested without transferring media-containing archives. |
+| Civistash | Historical popular-content metadata coverage | Streams without media persistence, but observed shards did not contain formal tag memberships. |
 | Public Civitai `image.getInfinite` | Preferred live metadata/tag relationship collector | Code implemented; direct access blocked in this environment. |
 | Public Civitai `/api/v1/images` | Coverage ledger and public-image enumeration | Pending a permitted collection environment. |
 | Civ-40M / academic sources | Historical ledger and optional metadata import | Needs a metadata-only distribution plus license review before ingestion. |
