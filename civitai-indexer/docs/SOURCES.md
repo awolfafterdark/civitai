@@ -9,7 +9,7 @@ This project indexes metadata and formal image→tag relationships. It does **no
 | Civitai `image.getInfinite` | Current public-gallery membership feed | Image IDs, metadata returned in-page, `tagIds`, cursors | Undocumented route; use normal browser Origin/Referer request context and conservative pacing. |
 | Civitai `/api/v1/images` | Public image enumeration and audit | JSON metadata and opaque `metadata.nextCursor` | Top-level formal `tagIds` are not relied upon unless present in the actual response. |
 | Civitai `tag.getAll` | Tag catalog | Tag IDs, names, types | Does not establish image membership by itself. |
-| Civistash sidecars | Historical verified memberships | JSON sidecar records only | Respect the dataset's license/terms; do not download WebDataset image payloads. |
+| Civistash sidecars | Historical metadata ledger | JSON sidecar records only | The 2026-06-08/09 shards were observed to omit `tags`/`tagIds`; do not treat them as formal memberships without validating each imported shard. |
 | Civ-40M / academic ledgers | Historical completeness ledger | Metadata files only where access and licensing permit | Metadata-only rows must not be treated as tag-complete. |
 
 ## Non-negotiable data rules
