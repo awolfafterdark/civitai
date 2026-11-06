@@ -31,6 +31,8 @@ The current external-data decision is recorded in [docs/DATA_ACQUISITION_STATUS.
 
 The repository includes a bounded GitHub Actions bootstrap job, `.github/workflows/build-initial-civistash-index.yml`, which streams two shards and publishes a seven-day SQLite artifact plus coverage report. It never writes media members or archive files to the runner disk.
 
+`build-initial-civitai-database.yml` is the combined bootstrap: it imports those historical metadata rows, adds one validated live `image.getInfinite` tag page, and publishes one initial SQLite database with source-aware coverage.
+
 ## Deliberate exclusions
 
 This repository does not download media, attempt to access authenticated search indexes, extract credentials, or bypass access controls. It stores only relevant structured metadata and formal tag relationship records returned by permitted sources.
