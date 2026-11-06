@@ -51,3 +51,24 @@ The collector stores only JSON response fields and formal tag IDs. It follows th
 ## 6. Backfill decision
 
 Prioritize raw metadata/sidecar archives first. Only run a historical traversal after measuring the current coverage and confirming the missing membership benefit justifies it. Cursors must be followed until absent; an empty page with a next cursor is not terminal.
+
+## 7. Large WebDataset archives: stream and discard media
+
+For an ordinary `.tar.gz`, gzip must be read in order. This command never saves an archive or image/video member: it reads each tar member from the network stream, imports only `*.json` sidecars, and skips media bytes immediately.
+
+```bash
+# Optional, only for a dataset that requires it. Keep this token out of shell history and source files.
+export HF_TOKEN='temporary-read-token'
+
+python -m civitai_indexer --db data/civitai.sqlite stream-tar-gz \
+  'https://example.org/archive.tar.gz' --source metadata-sidecars
+```
+
+For speed, parallelize **separate archives**, not arbitrary ranges of one gzip file:
+
+```bash
+python -m civitai_indexer --db data/civitai.sqlite stream-tar-gz-list shards.txt \
+  --source civistash-sidecars --workers 4
+```
+
+`shards.txt` contains one direct archive URL per line. Each worker uses a temporary SQLite database for structured records only; the coordinator merges it into the canonical database and checkpoints each completed URL. A failed URL remains uncheckpointed and is retried on the next run. The command reports media member count and uncompressed media bytes discarded, but retains neither.
