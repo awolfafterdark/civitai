@@ -9,6 +9,9 @@ description = "Media-free, provenance-aware local Civitai image and tag index"
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+parquet = ["pyarrow>=16"]
+
 [project.scripts]
 civitai-index = "civitai_indexer.cli:main"
 
