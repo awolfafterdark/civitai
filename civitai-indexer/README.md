@@ -37,6 +37,8 @@ The repository includes a bounded GitHub Actions bootstrap job, `.github/workflo
 
 `build-aer6-metadata-ledger.yml` imports only AER6's 97,965-row SFW `meta.jsonl`; it deliberately excludes all embedding arrays and any image payload.
 
+`build-thefcraft-metadata-ledger.yml` imports the two public Parquet exports from `thefcraft/civitai-stable-diffusion-337k` (327.1k metadata/prompt rows) and deliberately never accesses that repository's separate image archives.
+
 ## Deliberate exclusions
 
 This repository does not persist media, attempt to access authenticated search indexes, extract credentials, or bypass access controls. It stores only relevant structured metadata and formal tag relationship records returned by permitted sources. For a gzip archive that co-locates media and JSON sidecars, media bytes may traverse the forward-only stream but are never written to disk or included in an artifact.

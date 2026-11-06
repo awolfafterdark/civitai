@@ -13,6 +13,7 @@ This project indexes metadata and formal image→tag relationships. It does **no
 | Civ-40M / academic ledgers | Historical completeness ledger | Metadata files only where access and licensing permit | Metadata-only rows must not be treated as tag-complete. |
 | `lehduong/civitai-hq` | Public historical metadata ledger | 25 Parquet files (~200 MB, 1.1M rows) | Schema has no formal image tag relation. |
 | `AER6/civitai-multimodal-rag-data` | Public, strictly-SFW metadata/semantic ledger | `data/meta.jsonl` (97,965 records); embedding arrays intentionally excluded | No formal image tag relation. |
+| `thefcraft/civitai-stable-diffusion-337k` | Public historical prompt/metadata ledger | Two public Parquet exports (327.1k rows; 157.7 MB); no `images/` archive is touched | Schema has prompts and generation fields but no formal image tag relation. |
 | `pixelgraple/civitai-image-search` | Design/reference implementation for community indexing | Public source code and schema only | Its catalog is contributor-selected and its worker persists media, so it is neither a complete corpus nor an import source for this media-free project. |
 
 ## Non-negotiable data rules
