@@ -27,7 +27,7 @@ python -m unittest discover -s tests -v
 
 See [docs/OPERATIONS.md](docs/OPERATIONS.md) for ingestion and sync commands, and [docs/SOURCES.md](docs/SOURCES.md) for source rules.
 
-The current external-data decision is recorded in [docs/DATA_ACQUISITION_STATUS.md](docs/DATA_ACQUISITION_STATUS.md). Civistash's sidecars are valuable, but they are only distributed inside media-containing WebDataset archives, so this repository intentionally does not download them.
+The current external-data decision is recorded in [docs/DATA_ACQUISITION_STATUS.md](docs/DATA_ACQUISITION_STATUS.md). Civistash's sidecars are valuable historical metadata, but the first observed shards did not carry formal tag fields. The repository streams their JSON sidecars without retaining media and treats their rows as a coverage ledger rather than exact tag membership.
 
 The repository includes a bounded GitHub Actions bootstrap job, `.github/workflows/build-initial-civistash-index.yml`, which streams two shards and publishes a seven-day SQLite artifact plus coverage report. It never writes media members or archive files to the runner disk.
 
