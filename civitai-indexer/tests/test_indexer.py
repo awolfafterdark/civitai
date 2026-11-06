@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import io
+import os
 import tarfile
 import tempfile
 import unittest
@@ -100,6 +101,26 @@ class IndexerTests(unittest.TestCase):
         self.assertEqual(result["skipped_media"], 1)
         self.assertEqual(result["discarded_media_bytes"], len(image_bytes))
         self.assertEqual(db.coverage(self.conn)["images"], 1)
+
+    def test_stream_tar_gz_appends_captured_filename_to_github_summary(self):
+        payload = io.BytesIO()
+        with tarfile.open(fileobj=payload, mode="w:gz") as archive:
+            sidecar = json.dumps({"id": 456, "tagIds": [8]}).encode()
+            info = tarfile.TarInfo("456.json")
+            info.size = len(sidecar)
+            archive.addfile(info, io.BytesIO(sidecar))
+        summary = self.root / "summary.md"
+        old_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        os.environ["GITHUB_STEP_SUMMARY"] = str(summary)
+        try:
+            stream_tar_gz(self.conn, "https://example.invalid/progress.tar.gz", "fixture",
+                          opener=lambda *_: io.BytesIO(payload.getvalue()))
+        finally:
+            if old_summary is None:
+                os.environ.pop("GITHUB_STEP_SUMMARY", None)
+            else:
+                os.environ["GITHUB_STEP_SUMMARY"] = old_summary
+        self.assertIn("`456.json`", summary.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
