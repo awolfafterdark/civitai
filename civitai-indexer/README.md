@@ -33,6 +33,8 @@ The repository includes a bounded GitHub Actions bootstrap job, `.github/workflo
 
 `build-initial-civitai-database.yml` is the combined bootstrap: it imports those historical metadata rows, adds one validated live `image.getInfinite` tag page, and publishes one initial SQLite database with source-aware coverage.
 
+`build-lehduong-hq-ledger.yml` imports the public 1.1M-row `lehduong/civitai-hq` Parquet corpus as a separate metadata-only ledger. It downloads only Parquet metadata partitions and deletes each temporary partition after import.
+
 ## Deliberate exclusions
 
 This repository does not download media, attempt to access authenticated search indexes, extract credentials, or bypass access controls. It stores only relevant structured metadata and formal tag relationship records returned by permitted sources.
