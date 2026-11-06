@@ -1,0 +1,13 @@
+{
+  "archive": {
+    "description": "Daily snapshots of the top CivitAI images with full metadata sidecars, packaged as WebDataset .tar.gz shards (one shard per day).",
+    "citation": "@misc{civistash2026, author={Hyphonical}, title={Civistash: Daily Top CivitAI Images Archive}, year={2026}}",
+    "homepage": "https://github.com/Hyphonical/civistash",
+    "license": "other",
+    "features": {
+      "jpg": {
+        "_type": "Image"
+      }
+    }
+  }
+}
