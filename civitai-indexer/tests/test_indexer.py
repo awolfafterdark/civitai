@@ -74,6 +74,7 @@ class IndexerTests(unittest.TestCase):
         path.write_text('{"id":1,"tagIds":[7]}\n{"id":2,"tagIds":[7,8]}\n', encoding="utf-8")
         result = import_images(self.conn, path, "fixture", "fixture")
         self.assertEqual(result["images"], 2)
+        self.assertEqual(result["tags"], 3)
         self.assertEqual(result["memberships"], 3)
 
 
