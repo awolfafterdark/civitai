@@ -90,6 +90,26 @@ class IndexerTests(unittest.TestCase):
             "https://example.invalid/image.webp",
         )
 
+    def test_text_search_indexes_prompts_tags_models_and_loras_without_media(self):
+        source = db.ensure_source(self.conn, "metadata", "fixture")
+        with db.transaction(self.conn):
+            db.upsert_image(self.conn, {
+                "id": "a", "meta": {"prompt": "golden hour beach portrait", "tags": ["sunset"],
+                "modelName": "Krea2", "loras": ["film grain"]},
+            }, source, None)
+            db.upsert_image(self.conn, {"id": "b", "meta": {"prompt": "studio portrait"}}, source, None)
+        self.assertEqual([row["id"] for row in db.text_search(self.conn, ["golden", "beach"], "prompt", 10)], ["a"])
+        self.assertEqual([row["id"] for row in db.text_search(self.conn, ["sunset"], "prompt-tags", 10)], ["a"])
+        self.assertEqual([row["id"] for row in db.text_search(self.conn, ["Krea2"], "all", 10)], ["a"])
+
+    def test_rebuild_text_index_migrates_existing_metadata_without_network(self):
+        source = db.ensure_source(self.conn, "metadata", "fixture")
+        with db.transaction(self.conn):
+            db.upsert_image(self.conn, {"id": "a", "prompt": "before rebuild"}, source, None)
+            self.conn.execute("DELETE FROM image_text_fts")
+        self.assertEqual(db.rebuild_text_index(self.conn), 1)
+        self.assertEqual([row["id"] for row in db.text_search(self.conn, ["before"], "prompt", 10)], ["a"])
+
     def test_stream_tar_gz_ingests_sidecars_and_discards_media(self):
         payload = io.BytesIO()
         with tarfile.open(fileobj=payload, mode="w:gz") as archive:
