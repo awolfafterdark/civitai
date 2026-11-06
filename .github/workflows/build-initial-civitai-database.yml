@@ -1,0 +1,50 @@
+name: build-initial-civitai-database
+
+on:
+  push:
+    paths:
+      - .github/workflows/build-initial-civitai-database.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e civitai-indexer
+      - name: Start JSON capture manifest
+        run: |
+          echo "## Captured JSON sidecars" >> "$GITHUB_STEP_SUMMARY"
+          echo "Each listed sidecar was indexed; image/video members were discarded." >> "$GITHUB_STEP_SUMMARY"
+      - name: Stream historical metadata sidecars without writing media
+        run: >-
+          python -m civitai_indexer
+          --db civitai-indexer/data/initial-civitai.sqlite
+          stream-tar-gz-list civitai-indexer/data/civistash_initial_shards.txt
+          --source civistash-sidecars --workers 2 --timeout 180
+      - name: Add validated live image-tag relations
+        run: >-
+          python -m civitai_indexer
+          --db civitai-indexer/data/initial-civitai.sqlite
+          sync-trpc --pages 1 --delay 0 --checkpoint initial-live-tags
+      - name: Measure combined coverage
+        run: >-
+          python -m civitai_indexer
+          --db civitai-indexer/data/initial-civitai.sqlite coverage
+          > civitai-indexer/data/initial-civitai-coverage.json
+      - name: Publish combined initial database
+        uses: actions/upload-artifact@v4
+        with:
+          name: initial-civitai-database
+          path: |
+            civitai-indexer/data/initial-civitai.sqlite
+            civitai-indexer/data/initial-civitai-coverage.json
+          if-no-files-found: error
+          retention-days: 7
