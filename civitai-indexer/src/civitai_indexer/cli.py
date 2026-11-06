@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import db
 from .collector import sync_trpc
-from .importers import import_images, import_tags
+from .importers import import_images, import_parquet, import_tags
 from .streaming import stream_many_tar_gz, stream_tar_gz
 
 
@@ -26,6 +26,13 @@ def parser() -> argparse.ArgumentParser:
         cmd.add_argument("--kind", default="dataset")
         cmd.add_argument("--location")
         cmd.add_argument("--license-note")
+    parquet = sub.add_parser("import-parquet", help="import metadata-only Parquet in bounded batches (requires .[parquet])")
+    parquet.add_argument("path", type=Path)
+    parquet.add_argument("--source", required=True)
+    parquet.add_argument("--kind", default="dataset")
+    parquet.add_argument("--location")
+    parquet.add_argument("--license-note")
+    parquet.add_argument("--batch-size", type=int, default=4096)
     sub.add_parser("coverage", help="show image/tag membership coverage and source provenance")
     search = sub.add_parser("search", help="local AND/OR/NOT tag-ID search")
     search.add_argument("--all", default="", help="comma-separated tag IDs; every tag must match")
@@ -62,6 +69,8 @@ def main(argv: list[str] | None = None) -> int:
         result = import_images(conn, args.path, args.source, args.kind, args.location, args.license_note)
     elif args.command == "import-tags":
         result = import_tags(conn, args.path, args.source, args.kind, args.location, args.license_note)
+    elif args.command == "import-parquet":
+        result = import_parquet(conn, args.path, args.source, args.kind, args.location, args.license_note, args.batch_size)
     elif args.command == "coverage":
         result = db.coverage(conn)
     elif args.command == "search":
