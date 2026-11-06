@@ -79,6 +79,8 @@ def import_images(conn, path: Path, source_name: str, source_kind: str, location
             ok, memberships = db.upsert_image(conn, record, source_id, import_id)
             counters["images"] += int(ok)
             counters["memberships"] += memberships
+            raw_tags = record.get("tagIds", record.get("tags", []))
+            counters["tags"] += len(raw_tags) if isinstance(raw_tags, list) else 0
         db.finish_import(conn, import_id, counters)
     return counters
 
@@ -107,5 +109,7 @@ def import_payload(conn, payload: Any, source_name: str, source_kind: str, artif
             ok, memberships = db.upsert_image(conn, record, source_id, import_id)
             counters["images"] += int(ok)
             counters["memberships"] += memberships
+            raw_tags = record.get("tagIds", record.get("tags", []))
+            counters["tags"] += len(raw_tags) if isinstance(raw_tags, list) else 0
         db.finish_import(conn, import_id, counters)
     return counters
