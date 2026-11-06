@@ -1,0 +1,2 @@
+https://huggingface.co/datasets/Hyphonical/Civistash/resolve/main/2026-06-08.tar.gz?download=true
+https://huggingface.co/datasets/Hyphonical/Civistash/resolve/main/2026-06-09.tar.gz?download=true
