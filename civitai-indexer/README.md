@@ -8,6 +8,7 @@ A media-free, provenance-aware local Civitai image/tag database. It exists to ma
 - JSON/JSONL/NDJSON/gzip metadata and sidecar importer that accepts REST-style and nested tRPC-style envelopes.
 - Source-aware coverage report that distinguishes all images from those with verified formal tag membership.
 - Local AND/OR/NOT tag-ID queries across the entire imported corpus.
+- Local SQLite FTS over retained prompts, named tags, model names, and LoRA names; it works for metadata-ledger sources even when they do not provide formal tag IDs.
 - Conservative `image.getInfinite` newest-first collector using the verified browser-context request shape, opaque cursor checkpoints, bounded pages, and no media retrieval.
 - Streaming `.tar.gz` sidecar importer: reads only JSON members into SQLite, immediately discards media members, and parallelizes independent archives through temporary metadata-only worker databases.
 - Standard-library-only Python implementation and deterministic tests.
@@ -38,6 +39,21 @@ The repository includes a bounded GitHub Actions bootstrap job, `.github/workflo
 `build-aer6-metadata-ledger.yml` imports only AER6's 97,965-row SFW `meta.jsonl`; it deliberately excludes all embedding arrays and any image payload.
 
 `build-thefcraft-metadata-ledger.yml` imports the two public Parquet exports from `thefcraft/civitai-stable-diffusion-337k` (327.1k metadata/prompt rows) and deliberately never accesses that repository's separate image archives.
+
+## Text search
+
+The reference implementation at `pixelgraple/civitai-image-search` demonstrates that prompt/model/LoRA search is valuable even when a source lacks formal Civitai tag relations. This index keeps that capability media-free:
+
+```bash
+python -m civitai_indexer --db data/civitai.sqlite search-text '"golden hour" beach' --scope prompt-tags
+python -m civitai_indexer --db data/civitai.sqlite search-text Krea2 --scope all
+```
+
+After upgrading an existing database built before this feature, rebuild its local FTS without downloading anything:
+
+```bash
+python -m civitai_indexer --db data/civitai.sqlite rebuild-text-index
+```
 
 ## Deliberate exclusions
 
