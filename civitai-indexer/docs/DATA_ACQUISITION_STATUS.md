@@ -9,6 +9,8 @@ Observed on 2026-11-05 from the public Hugging Face repository metadata for `Hyp
 
 No media and no archive shard was downloaded.
 
+The Hugging Face Dataset Viewer was also checked as a potential metadata-only escape hatch. It reported no Parquet exports and a failed dataset-generation job (HTTP 500), so it currently cannot serve the JSON sidecar column separately from the archive shards.
+
 ## Why the archive was deliberately not downloaded
 
 The repository contains daily `.tar.gz` WebDataset shards. Each shard holds paired media files and `<image-id>.json` metadata sidecars, but does **not** publish sidecars as separate downloadable files. The observed daily shards range from approximately 1.1 GB to 7.5 GB. Downloading a shard would necessarily transfer media bytes even if the extractor ignored them after receipt.
