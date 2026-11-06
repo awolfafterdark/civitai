@@ -29,6 +29,8 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for ingestion and sync commands, an
 
 The current external-data decision is recorded in [docs/DATA_ACQUISITION_STATUS.md](docs/DATA_ACQUISITION_STATUS.md). Civistash's sidecars are valuable, but they are only distributed inside media-containing WebDataset archives, so this repository intentionally does not download them.
 
+The repository includes a bounded GitHub Actions bootstrap job, `.github/workflows/build-initial-civistash-index.yml`, which streams two shards and publishes a seven-day SQLite artifact plus coverage report. It never writes media members or archive files to the runner disk.
+
 ## Deliberate exclusions
 
 This repository does not download media, attempt to access authenticated search indexes, extract credentials, or bypass access controls. It stores only relevant structured metadata and formal tag relationship records returned by permitted sources.
