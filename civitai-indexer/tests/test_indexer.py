@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import io
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 from civitai_indexer import db
 from civitai_indexer.collector import TRPC_HEADERS, sync_trpc, trpc_url
 from civitai_indexer.importers import find_next_cursor, import_images, unwrap_items
+from civitai_indexer.streaming import stream_tar_gz
 
 
 class IndexerTests(unittest.TestCase):
@@ -76,6 +79,27 @@ class IndexerTests(unittest.TestCase):
         self.assertEqual(result["images"], 2)
         self.assertEqual(result["tags"], 3)
         self.assertEqual(result["memberships"], 3)
+
+    def test_stream_tar_gz_ingests_sidecars_and_discards_media(self):
+        payload = io.BytesIO()
+        with tarfile.open(fileobj=payload, mode="w:gz") as archive:
+            image_bytes = b"not persisted" * 100
+            image_info = tarfile.TarInfo("123.jpg")
+            image_info.size = len(image_bytes)
+            archive.addfile(image_info, io.BytesIO(image_bytes))
+            sidecar = json.dumps({"id": 123, "tags": [{"id": 7, "name": "landscape"}]}).encode()
+            sidecar_info = tarfile.TarInfo("123.json")
+            sidecar_info.size = len(sidecar)
+            archive.addfile(sidecar_info, io.BytesIO(sidecar))
+        def opener(url, headers, timeout):
+            self.assertNotIn("Authorization", headers)
+            return io.BytesIO(payload.getvalue())
+        result = stream_tar_gz(self.conn, "https://example.invalid/day.tar.gz", "fixture", opener=opener)
+        self.assertEqual(result["images"], 1)
+        self.assertEqual(result["memberships"], 1)
+        self.assertEqual(result["skipped_media"], 1)
+        self.assertEqual(result["discarded_media_bytes"], len(image_bytes))
+        self.assertEqual(db.coverage(self.conn)["images"], 1)
 
 
 if __name__ == "__main__":
