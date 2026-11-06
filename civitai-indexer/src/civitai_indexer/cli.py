@@ -39,6 +39,11 @@ def parser() -> argparse.ArgumentParser:
     search.add_argument("--any", default="", help="comma-separated tag IDs; at least one must match")
     search.add_argument("--exclude", default="", help="comma-separated tag IDs that must not match")
     search.add_argument("--limit", type=int, default=50)
+    text = sub.add_parser("search-text", help="local full-text metadata search; no media access")
+    text.add_argument("query", help="words or quoted phrases; all terms must match")
+    text.add_argument("--scope", choices=("prompt", "prompt-tags", "all"), default="prompt-tags")
+    text.add_argument("--limit", type=int, default=50)
+    sub.add_parser("rebuild-text-index", help="rebuild local FTS from retained metadata without network access")
     sync = sub.add_parser("sync-trpc", help="fetch image metadata and tag IDs only; never downloads media")
     sync.add_argument("--pages", type=int, default=1, help="maximum pages to fetch; explicit opt-in for >1 (default: 1)")
     sync.add_argument("--delay", type=float, default=2.0, help="seconds between page requests (default: 2)")
@@ -75,6 +80,12 @@ def main(argv: list[str] | None = None) -> int:
         result = db.coverage(conn)
     elif args.command == "search":
         result = db.search_images(conn, comma_values(args.all), comma_values(args.any), comma_values(args.exclude), args.limit)
+    elif args.command == "search-text":
+        import re
+        terms = [quoted or bare for quoted, bare in re.findall(r'"([^"]+)"|(\S+)', args.query)]
+        result = db.text_search(conn, terms, args.scope, args.limit)
+    elif args.command == "rebuild-text-index":
+        result = {"indexed_images": db.rebuild_text_index(conn)}
     elif args.command == "sync-trpc":
         result = sync_trpc(conn, max_pages=args.pages, checkpoint=args.checkpoint, delay_seconds=args.delay, resume=not args.no_resume)
     elif args.command == "stream-tar-gz":
