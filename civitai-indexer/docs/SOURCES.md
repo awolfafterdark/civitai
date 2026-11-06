@@ -12,12 +12,15 @@ This project indexes metadata and formal image→tag relationships. It does **no
 | Civistash sidecars | Historical metadata ledger | JSON sidecar records only | The 2026-06-08/09 shards were observed to omit `tags`/`tagIds`; do not treat them as formal memberships without validating each imported shard. |
 | Civ-40M / academic ledgers | Historical completeness ledger | Metadata files only where access and licensing permit | Metadata-only rows must not be treated as tag-complete. |
 | `lehduong/civitai-hq` | Public historical metadata ledger | 25 Parquet files (~200 MB, 1.1M rows) | Schema has no formal image tag relation. |
+| `AER6/civitai-multimodal-rag-data` | Public, strictly-SFW metadata/semantic ledger | `data/meta.jsonl` (97,965 records); embedding arrays intentionally excluded | No formal image tag relation. |
+| `pixelgraple/civitai-image-search` | Design/reference implementation for community indexing | Public source code and schema only | Its catalog is contributor-selected and its worker persists media, so it is neither a complete corpus nor an import source for this media-free project. |
 
 ## Non-negotiable data rules
 
 - `image_tags` means a formal relation was actually observed in a source record.
 - `image_sources.has_formal_tags` records whether a contributing source carried a formal tag field.
 - A metadata-only image is useful for coverage measurement but never for exact AND/NOT tag claims.
+- An upstream search service is never treated as a dataset merely because it exposes results. A merge requires an explicit, licensed metadata export with provenance.
 - Every import receives a source record, an import record, artifact hash, and per-source contribution counters.
 - The schema unions independently verified tag memberships; a later partial response cannot erase an earlier verified relation.
 

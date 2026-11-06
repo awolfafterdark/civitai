@@ -81,6 +81,15 @@ class IndexerTests(unittest.TestCase):
         self.assertEqual(result["tags"], 3)
         self.assertEqual(result["memberships"], 3)
 
+    def test_download_url_is_normalized_for_metadata_only_sources(self):
+        source = db.ensure_source(self.conn, "aer6", "dataset")
+        with db.transaction(self.conn):
+            db.upsert_image(self.conn, {"id": 99, "download_url": "https://example.invalid/image.webp"}, source, None)
+        self.assertEqual(
+            self.conn.execute("SELECT url FROM images WHERE id='99'").fetchone()[0],
+            "https://example.invalid/image.webp",
+        )
+
     def test_stream_tar_gz_ingests_sidecars_and_discards_media(self):
         payload = io.BytesIO()
         with tarfile.open(fileobj=payload, mode="w:gz") as archive:

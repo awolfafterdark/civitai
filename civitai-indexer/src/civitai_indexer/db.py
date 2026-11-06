@@ -157,7 +157,7 @@ def upsert_image(conn: sqlite3.Connection, image: dict[str, Any], source_id: int
         return False, 0
     image_id = str(image_id)
     meta = image.get("meta") if isinstance(image.get("meta"), dict) else {}
-    url = image.get("url") or image.get("imageUrl") or meta.get("url")
+    url = image.get("url") or image.get("imageUrl") or image.get("download_url") or image.get("page_url") or meta.get("url")
     created_at = image.get("createdAt") or image.get("created_at")
     model_version_id = image.get("modelVersionId") or image.get("model_version_id")
     nsfw_level = image.get("nsfwLevel")

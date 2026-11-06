@@ -35,6 +35,10 @@ The repository includes a bounded GitHub Actions bootstrap job, `.github/workflo
 
 `build-lehduong-hq-ledger.yml` imports the public 1.1M-row `lehduong/civitai-hq` Parquet corpus as a separate metadata-only ledger. It downloads only Parquet metadata partitions and deletes each temporary partition after import.
 
+`build-aer6-metadata-ledger.yml` imports only AER6's 97,965-row SFW `meta.jsonl`; it deliberately excludes all embedding arrays and any image payload.
+
 ## Deliberate exclusions
 
-This repository does not download media, attempt to access authenticated search indexes, extract credentials, or bypass access controls. It stores only relevant structured metadata and formal tag relationship records returned by permitted sources.
+This repository does not persist media, attempt to access authenticated search indexes, extract credentials, or bypass access controls. It stores only relevant structured metadata and formal tag relationship records returned by permitted sources. For a gzip archive that co-locates media and JSON sidecars, media bytes may traverse the forward-only stream but are never written to disk or included in an artifact.
+
+The public [Civitai Image Search](https://github.com/pixelgraple/civitai-image-search) project is tracked as a useful implementation reference: it demonstrates a mature SQLite/FTS catalog, durable collection queues, provenance-like source fields, and metadata repair. It is not used as a dataset because its live library is contributor-selected and its worker intentionally stores images.
